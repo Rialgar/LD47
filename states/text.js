@@ -21,11 +21,7 @@ const TextState = (lines, funcName) => ({
     mouseup: function(data) { },
     mousemove: function(data) { },
 
-    gamepaddown: function(data) {
-        if(data.button === "start") {
-            this.app[funcName]();
-        };
-    },
+    gamepaddown: function(data) { },
     gamepadhold: function(data) { },
     gamepadup: function(data) { },
     gamepadmove: function(data) { },

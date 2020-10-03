@@ -1,6 +1,7 @@
 import './lib/playground.js';
 
 import TextState from './states/text.js'
+import GameState from './states/game.js'
 
 const Start = TextState([
     "Nothing to See here",
@@ -10,6 +11,12 @@ const Start = TextState([
     "",
     "F1 anytime for controls."
 ], 'start');
+
+const Help = TextState([
+    "Nothing to do"
+], 'start');
+
+const Game = GameState();
 
 const app = playground({
     preload: function() { },
@@ -29,6 +36,7 @@ const app = playground({
         //custom functions
 
         help: function(){
+            this.setState(Help);
         },
     
         loose: function(){
@@ -38,6 +46,7 @@ const app = playground({
         },
     
         start: function(){
+            this.setState(Game);
         },
     
         restart: function(){
