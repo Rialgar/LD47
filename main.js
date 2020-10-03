@@ -4,16 +4,25 @@ import TextState from './states/text.js'
 import GameState from './states/game.js'
 
 const Start = TextState([
-    "Nothing to See here",
-    "This is an empty game shell",
+    "Stuck in a Loop (Working Title)",
     "",
-    "Press enter, space or start", "to start.",
+    "Evade the (red) obstacles",
+    "collect the (gold) coins",
+    "",
+    "Press enter or space",
+    "to start.",
     "",
     "F1 anytime for controls."
 ], 'start');
 
 const Help = TextState([
-    "Nothing to do"
+    "Controls",
+    "",
+    "Left/A - Evade towards the center",
+    "Right/D - Evade towards the outside",
+    "",
+    "Press enter or space",
+    "to continue.",
 ], 'start');
 
 const Game = GameState();
@@ -39,10 +48,20 @@ const app = playground({
             this.setState(Help);
         },
     
-        loose: function(){
+        loose: function(score){
+            this.setState(TextState([
+                "You lost",
+                "",
+                "Your score was",
+                `${score}`,
+                "",
+                "Your highest score was",
+                `${localStorage.highScore}`
+            ], 'restart'));
         },
     
         win: function(){
+            //no win condition in this game
         },
     
         start: function(){
@@ -50,5 +69,7 @@ const app = playground({
         },
     
         restart: function(){
+            Game.create();
+            this.setState(Game);
         }
 });

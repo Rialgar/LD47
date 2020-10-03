@@ -16,11 +16,14 @@ const pathSize = {
 }
 const pathLength = 2 * pathSize.x + 2 * pathSize.y;
 
+const playerMargin = 0;
+const playerSize = (pathWidth - 2 - playerMargin) / 2;
 const player = {
     position: 0,
     speed: 10,
     evasion: 0,
-    round: 0
+    round: 0,
+    coins: 0
 }
 
 let things = [];
@@ -114,6 +117,8 @@ function addCoin() {
             fillStyle: 'gold',
             alive: true
         });
+    } else {
+        console.log("Skipping a Coin");
     }
 }
 
@@ -130,7 +135,6 @@ function addObstacle() {
         (thing.side === side && thing.position - thing.size - obstacleSize < position && thing.position + thing.size + obstacleSize > position) ||
         (thing.side !== side && thing.type === 'obstacle' && thing.position - thing.size - 5*obstacleSize < position && thing.position + thing.size + 5*obstacleSize > position)
     ));
-    console.log(attempts);
     if (attempts < maxSpawnAttempts) {
         things.push({
             type: 'obstacle',
@@ -141,6 +145,19 @@ function addObstacle() {
             fillStyle: 'red',
             alive: true
         });
+    } else {
+        console.log("Skipping an Obstacle");
+    }
+}
+
+let score = 0;
+let highScore = parseInt(localStorage.highScore) || 0;
+
+function updateScore(){
+    score = Math.round(player.position) + pathLength*player.coins;
+    if(score > highScore){
+        highScore = score;
+        localStorage.highScore = highScore;
     }
 }
 
@@ -151,7 +168,10 @@ const GameState = () => ({
         player.position = 0;
         player.speed = 50;
         player.evasion = 0;
+        player.round = 0;
+        player.coins = 0;
         things = [];
+        score = 0;
 
         addCoin();
         addObstacle();
@@ -164,8 +184,34 @@ const GameState = () => ({
 
     step: function (dt) {
         player.position += player.speed * dt;
+        updateScore();
         things.forEach(thing => {
-            thing.alive &= thing.position >= player.position - 2 * pathWidth;
+            if(player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position){
+                switch (thing.type) {
+                    case 'coin':
+                        player.coins += 1;
+                        updateScore();
+                        thing.alive = false;
+                        break;
+                    case 'obstacle':
+                        if(thing.hitOnce){
+                            this.app.loose(score);
+                        } else {
+                            thing.hitOnce = true;
+                        }
+                        break;
+                }
+            }
+            if(thing.position <= player.position - 2 * pathWidth){
+                switch (thing.type) {
+                    case 'coin':
+                        thing.position += pathLength;
+                        break;
+                    case 'obstacle':
+                        thing.alive = false;
+                        break;
+                }
+            }            
         })
         things.filter(thing => !thing.alive).forEach(thing => {
             switch (thing.type) {
@@ -200,28 +246,47 @@ const GameState = () => ({
         ctx.strokeRect(outerBorder, outerBorder, gameSize.x - 2 * outerBorder, gameSize.y - 2 * outerBorder);
         ctx.strokeRect(innerBorder, innerBorder, gameSize.x - 2 * innerBorder, gameSize.y - 2 * innerBorder);
 
-        drawThing(ctx, player.position, player.evasion, 0, 'green');
+        drawThing(ctx, player.position, player.evasion, playerMargin, 'turquoise');
 
         things.forEach(thing => {
             drawThing(ctx, thing.position, thing.side, thing.margin, thing.fillStyle);
         });
 
+        const textMargin = 4;
+        const textLeft = innerBorder + textMargin;
+        const textRight =  gameSize.x - innerBorder - textMargin;
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = 'white';
+        ctx.font = `5px 'Press Start 2P'`;
+        ctx.fillText("Distance", textLeft, innerBorder + textMargin);
+        ctx.fillText("Coins", textLeft, innerBorder + textMargin + 20);
+        ctx.fillText("Score", textLeft, innerBorder + textMargin + 40);
+        ctx.fillText("Highscore", textLeft, innerBorder + textMargin + 60);
+
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(player.position), textRight, innerBorder + textMargin + 10);
+        ctx.fillText(player.coins, textRight, innerBorder + textMargin + 30);
+        ctx.fillText(score, textRight, innerBorder + textMargin + 50);
+        ctx.fillText(highScore, textRight, innerBorder + textMargin + 70);
+
         ctx.restore();
     },
 
     keydown: function (data) {
-        if (data.key === 'left') {
+        if (data.key === 'left' || data.key === 'a') {
             player.evasion -= 1;
         }
-        if (data.key === 'right') {
+        if (data.key === 'right' || data.key === 'd') {
             player.evasion += 1;
         }
     },
     keyup: function (data) {
-        if (data.key === 'left') {
+        if (data.key === 'left' || data.key === 'a') {
             player.evasion += 1;
         }
-        if (data.key === 'right') {
+        if (data.key === 'right' || data.key === 'd') {
             player.evasion -= 1;
         }
     },
