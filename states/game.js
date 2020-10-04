@@ -96,6 +96,23 @@ outerPath.forEach(segment => {
     });
 });
 
+const outLinePath = JSON.parse(JSON.stringify(centerPath));
+outLinePath.forEach(segment => {
+    if(segment.r){
+        segment.r = pathWidth;
+    }
+    ['start', 'end'].forEach(key => {
+        ['x', 'y'].forEach(axis => {
+            if(segment[key][axis] === pathDistance){
+                segment[key][axis] -= pathWidth / 2;
+            }
+            if(segment[key][axis] === gameSize[axis] - pathDistance){
+                segment[key][axis] += pathWidth / 2;
+            }
+        });
+    });
+});
+
 const playerSize = 4;
 const player = {
     position: 0,
@@ -297,18 +314,27 @@ const GameState = () => ({
     },
     render: function (dt) {
         const ctx = this.app.layer.context;
-        ctx.fillStyle = 'black';
+        ctx.fillStyle = 'black';        
         ctx.fillRect(0, 0, this.app.width, this.app.height);
-
-        ctx.strokeStyle = 'white';
-        ctx.strokeRect(offset.x, offset.y, gameSize.x * scale, gameSize.y * scale);
 
         ctx.save();
         ctx.transform(scale, 0, 0, scale, offset.x, offset.y);
 
         ctx.strokeStyle = 'white';
-        ctx.strokeRect(outerBorder, outerBorder, gameSize.x - 2 * outerBorder, gameSize.y - 2 * outerBorder);
+        ctx.beginPath();
+        outLinePath.forEach(segment => {
+            if(segment.r){
+                ctx.arc(segment.cx, segment.cy, segment.r, segment.start.angle, segment.end.angle, true);                
+            } else {
+                ctx.lineTo(segment.start.x, segment.start.y);
+                ctx.lineTo(segment.end.x, segment.end.y);
+            }
+        });
+        ctx.closePath();
+        ctx.stroke();
+        ctx.lineJoin = 'round';
         ctx.strokeRect(innerBorder, innerBorder, gameSize.x - 2 * innerBorder, gameSize.y - 2 * innerBorder);
+        ctx.lineJoin = 'miter';
 
         ctx.globalAlpha = 1;
 
