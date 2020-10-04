@@ -1,4 +1,4 @@
-const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partIntervalMax }) => {
+const puff = ({ r, g, b, dampening, speedScale, maxAge, partIntervalMin, partIntervalMax }) => {
     let particles = [];
 
     let lastX = 0;
@@ -18,7 +18,7 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
         let remainder = dt;
         while (timeTilPart < 0) {
             let nextPart = Math.random() * partIntervalRange + partIntervalMin;
-            timeTilPart += nextPart                        
+            timeTilPart += nextPart
             const delta = Math.min(remainder, nextPart);
             remainder -= nextPart;
 
@@ -33,9 +33,9 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
                 size: 2
             });
 
-            if(startAge < 2*maxAge/3){
+            if (startAge < 2 * maxAge / 3) {
                 soundCounter--;
-                if(soundCounter <= 0){
+                if (soundCounter <= 0) {
                     app.sound.play('puff_s');
                     soundCounter = 8;
                 }
@@ -50,7 +50,7 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
             });
         }
 
-        if(remainder > 0){
+        if (remainder > 0) {
             particles.forEach(part => {
                 part.age += remainder;
                 part.x += part.vx * remainder;
@@ -59,12 +59,12 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
                 part.vy *= Math.pow(dampening, remainder);
             });
         }
-        particles = particles.filter(part => part.age < maxAge);        
+        particles = particles.filter(part => part.age < maxAge);
     }
 
     function draw(ctx) {
         particles.forEach(part => {
-            const gradient = ctx.createRadialGradient(part.x, part.y, 0, part.x, part.y, part.size);            
+            const gradient = ctx.createRadialGradient(part.x, part.y, 0, part.x, part.y, part.size);
             gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${(maxAge - part.age) / maxAge})`);
             gradient.addColorStop(1, `rgba(${r}, ${g}, ${b}, 0)`)
 
@@ -85,7 +85,7 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
 
     function reset() {
         particles = [],
-        lastX = 0;
+            lastX = 0;
         lastY = 0;
         currentX = 0;
         currentY = 0;

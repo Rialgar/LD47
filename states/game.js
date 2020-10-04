@@ -251,14 +251,14 @@ function updateScore(app) {
     if (score > highScore) {
         highScore = score;
         localStorage.highScore = highScore;
-        if(!highScoreBeat){
+        if (!highScoreBeat) {
             highScoreBeat = true;
             app.sound.play('highScore_s');
         }
     }
 }
 
-let puffEffect = puff({r: 255, g: 255, b: 255, dampening: 0.5, speedScale: 1200, maxAge: .5, partIntervalMin: 0.01, partIntervalMax: 0.01});
+let puffEffect = puff({ r: 255, g: 255, b: 255, dampening: 0.5, speedScale: 1200, maxAge: .5, partIntervalMin: 0.01, partIntervalMax: 0.01 });
 
 const GameState = () => ({
     create: function () {
@@ -300,7 +300,7 @@ const GameState = () => ({
             if (player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position) {
                 switch (thing.type) {
                     case 'coin':
-                        player.coins += 1;                        
+                        player.coins += 1;
                         updateScore(this.app);
                         thing.alive = false;
                         break;
@@ -331,12 +331,12 @@ const GameState = () => ({
                 case 'coin':
                     addCoin();
                     this.app.sound.play('coin_s');
-                    effects.push(explode({x: point.x, y: point.y, r: 218, g: 165, b: 32, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: -50}));
+                    effects.push(explode({ x: point.x, y: point.y, r: 218, g: 165, b: 32, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: -50 }));
                     break;
                 case 'obstacle':
                     addObstacle();
                     this.app.sound.play('explode_s');
-                    effects.push(explode({x: point.x, y: point.y, r: 255, g: 0, b: 0, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: 50}));
+                    effects.push(explode({ x: point.x, y: point.y, r: 255, g: 0, b: 0, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: 50 }));
                     player.speed += .2;
                     break;
             }

@@ -4,7 +4,7 @@ import TextState from './states/text.js'
 import GameState from './states/game.js'
 
 const Start = TextState([
-    "Stuck in a Loop (Working Title)",
+    "== Sputtering around the Loop ==",
     "",
     "Evade the (red) obstacles",
     "collect the (gold) coins",
@@ -17,7 +17,7 @@ const Start = TextState([
 ], 'start');
 
 const Help = TextState([
-    "Controls",
+    "== Controls ==",
     "",
     "Left/A - Evade towards the center",
     "Right/D - Evade towards the outside",
@@ -31,7 +31,7 @@ const Help = TextState([
 const Game = GameState();
 
 const app = playground({
-    preload: function() {
+    preload: function () {
         this.loadSounds("puff.wav", "coin.wav", "explode.wav", "death.wav", "highScore.wav");
         this.sound.alias('puff_s', 'puff', 0.1, 1);
         this.sound.alias('coin_s', 'coin', 0.2, 1);
@@ -39,62 +39,62 @@ const app = playground({
         this.sound.alias('death_s', 'death', 0.2, 1);
         this.sound.alias('highScore_s', 'highScore', 0.2, 1);
     },
-    create: function() {
+    create: function () {
         this.layer.canvas.id = 'game';
     },
-    ready: function() {
+    ready: function () {
         const doPlay = this.sound.play;
         const self = this;
-        this.sound.play = function(){
-            if(!self.muted){
+        this.sound.play = function () {
+            if (!self.muted) {
                 doPlay.apply(self.sound, arguments);
             }
         }
         this.setState(Start)
     },
 
-    keydown: function(data) {
-        if( data.key === "f1"){
+    keydown: function (data) {
+        if (data.key === "f1") {
             this.help();
-        } else if( data.key === "m" ){
+        } else if (data.key === "m") {
             this.muted = !this.muted;
             localStorage.muted = this.muted;
         }
     },
 
-        //custom functions
+    //custom functions
 
-        help: function(){
-            this.setState(Help);
-        },
-    
-        loose: function(score){
-            this.setState(TextState([
-                "You lost",
-                "",
-                "Your score was",
-                `${score}`,
-                "",
-                "Your highest score was",
-                `${localStorage.highScore}`,
-                '',
-                "Press enter or space",
-                "to restart.",
-            ], 'restart'));
-        },
-    
-        win: function(){
-            //no win condition in this game
-        },
-    
-        start: function(){
-            this.setState(Game);
-        },
-    
-        restart: function(){
-            Game.create();
-            this.setState(Game);
-        },
+    help: function () {
+        this.setState(Help);
+    },
 
-        muted: localStorage.muted === 'true'
+    loose: function (score) {
+        this.setState(TextState([
+            "You lost",
+            "",
+            "Your score was",
+            `${score}`,
+            "",
+            "Your highest score was",
+            `${localStorage.highScore}`,
+            '',
+            "Press enter or space",
+            "to restart.",
+        ], 'restart'));
+    },
+
+    win: function () {
+        //no win condition in this game
+    },
+
+    start: function () {
+        this.setState(Game);
+    },
+
+    restart: function () {
+        Game.create();
+        this.setState(Game);
+    },
+
+    muted: localStorage.muted === 'true'
 });
