@@ -1,3 +1,6 @@
+import explode from '../effects/explode.js';
+import puff from '../effects/puff.js';
+
 let scale = 1;
 const offset = { x: 0, y: 0 };
 
@@ -65,15 +68,15 @@ const pathLength = centerPath[centerPath.length - 1].end.pos;
 
 const innerPath = JSON.parse(JSON.stringify(centerPath));
 innerPath.forEach(segment => {
-    if(segment.r){
+    if (segment.r) {
         segment.r = pathWidth / 4;
     }
     ['start', 'end'].forEach(key => {
         ['x', 'y'].forEach(axis => {
-            if(segment[key][axis] === pathDistance){
+            if (segment[key][axis] === pathDistance) {
                 segment[key][axis] += pathWidth / 4;
             }
-            if(segment[key][axis] === gameSize[axis] - pathDistance){
+            if (segment[key][axis] === gameSize[axis] - pathDistance) {
                 segment[key][axis] -= pathWidth / 4;
             }
         });
@@ -81,32 +84,36 @@ innerPath.forEach(segment => {
 })
 const outerPath = JSON.parse(JSON.stringify(centerPath));
 outerPath.forEach(segment => {
-    if(segment.r){
+    if (segment.r) {
         segment.r = 3 * pathWidth / 4;
     }
     ['start', 'end'].forEach(key => {
         ['x', 'y'].forEach(axis => {
-            if(segment[key][axis] === pathDistance){
+            if (segment[key][axis] === pathDistance) {
                 segment[key][axis] -= pathWidth / 4;
             }
-            if(segment[key][axis] === gameSize[axis] - pathDistance){
+            if (segment[key][axis] === gameSize[axis] - pathDistance) {
                 segment[key][axis] += pathWidth / 4;
             }
         });
     });
 });
 
+function getPath(side) {
+    return side < 0 ? innerPath : (side > 0 ? outerPath : centerPath);
+}
+
 const outLinePath = JSON.parse(JSON.stringify(centerPath));
 outLinePath.forEach(segment => {
-    if(segment.r){
+    if (segment.r) {
         segment.r = pathWidth;
     }
     ['start', 'end'].forEach(key => {
         ['x', 'y'].forEach(axis => {
-            if(segment[key][axis] === pathDistance){
+            if (segment[key][axis] === pathDistance) {
                 segment[key][axis] -= pathWidth / 2;
             }
-            if(segment[key][axis] === gameSize[axis] - pathDistance){
+            if (segment[key][axis] === gameSize[axis] - pathDistance) {
                 segment[key][axis] += pathWidth / 2;
             }
         });
@@ -123,6 +130,7 @@ const player = {
 }
 
 let things = [];
+let effects = [];
 
 function getPathPoint(path, position) {
     while (position < 0) {
@@ -133,10 +141,13 @@ function getPathPoint(path, position) {
     }
     const segment = path.find(seg => seg.start.pos <= position && seg.end.pos > position);
     const blend = (position - segment.start.pos) / (segment.end.pos - segment.start.pos);
-    if(segment.r){
+    if (segment.r) {
+        const angle = segment.start.angle + (segment.end.angle - segment.start.angle) * blend;
         return {
             segment,
-            angle: segment.start.angle + (segment.end.angle - segment.start.angle) * blend
+            angle,
+            x: segment.cx + Math.cos(angle) * segment.r,
+            y: segment.cy + Math.sin(angle) * segment.r
         }
     } else {
         return {
@@ -149,15 +160,15 @@ function getPathPoint(path, position) {
 }
 
 function drawThing(ctx, position, side, size, color) {
-    const path = side < 0 ? innerPath : (side > 0 ? outerPath : centerPath);
+    const path = getPath(side);
     const start = getPathPoint(path, position - size);
     const end = getPathPoint(path, position + size);
     ctx.beginPath();
-    if(!start.angle){
+    if (!start.angle) {
         ctx.lineTo(start.x, start.y);
     }
-    
-    if(start.angle || end.angle){
+
+    if (start.angle || end.angle) {
         const cx = start.segment.cx || end.segment.cx;
         const cy = start.segment.cy || end.segment.cy;
         const r = start.segment.r || end.segment.r;
@@ -165,18 +176,18 @@ function drawThing(ctx, position, side, size, color) {
         const endAngle = end.angle || start.segment.end.angle;
 
         ctx.arc(cx, cy, r, startAngle, endAngle, true);
-    } else if (start.segment !== end.segment && end.segmentIndex != (start.segmentIndex + 1) % path.length ){
+    } else if (start.segment !== end.segment && end.segmentIndex != (start.segmentIndex + 1) % path.length) {
         const midSegment = path[(start.segmentIndex + 1) % path.length];
         ctx.arc(midSegment.cx, midSegment.cy, midSegment.r, midSegment.start.angle, midSegment.end.angle, true);
     }
 
-    if(!end.angle){
+    if (!end.angle) {
         ctx.lineTo(end.x, end.y);
     }
-    
+
     ctx.strokeStyle = color;
     ctx.lineWidth = size;
-    ctx.stroke();    
+    ctx.stroke();
 }
 
 const maxSpawnAttempts = 50;
@@ -186,7 +197,7 @@ function addCoin() {
     let position, side;
     do {
         side = (Math.random() < 0.5) ? -1 : 1;
-        position = Math.round(Math.random() * (pathLength * 2 / 3 - 2 * pathWidth) + player.position + pathLength / 3);
+        position = Math.random() * (pathLength * 2 / 3 - 2 * pathWidth) + player.position + pathLength / 3;
         attempts++;
     } while (attempts < maxSpawnAttempts && things.some(thing =>
         thing.side === side && thing.position - thing.size - coinSize < position && thing.position + thing.size + coinSize > position
@@ -197,7 +208,7 @@ function addCoin() {
             size: coinSize,
             position,
             side,
-            color: 'gold',
+            color: 'rgb(218, 165, 32)',
             alive: true
         });
     } else {
@@ -211,7 +222,7 @@ function addObstacle() {
     let position, side;
     do {
         side = (Math.random() < 0.5) ? -1 : 1;
-        position = Math.round(Math.random() * (pathLength * 3 / 4 - 2 * pathWidth) + player.position + pathLength / 4);
+        position = Math.random() * (pathLength * 3 / 4 - 2 * pathWidth) + player.position + pathLength / 4;
         attempts++;
     } while (attempts < maxSpawnAttempts && things.some(thing =>
         (thing.side === side && thing.position - thing.size - obstacleSize < position && thing.position + thing.size + obstacleSize > position) ||
@@ -242,6 +253,8 @@ function updateScore() {
     }
 }
 
+let puffEffect = puff({r: 255, g: 255, b: 255, dampening: 0.5, speedScale: 1200, maxAge: .5, partIntervalMin: 0.01, partIntervalMax: 0.01});
+
 const GameState = () => ({
     create: function () {
         this.resize();
@@ -252,10 +265,16 @@ const GameState = () => ({
         player.round = 0;
         player.coins = 0;
         things = [];
+        effects = [puffEffect];
         score = 0;
+
+        puffEffect.reset();
+        puffEffect.move(pathDistance, pathDistance, pathDistance, pathDistance, 1);
 
         addCoin();
         addObstacle();
+
+        updateScore();
     },
     resize: function () {
         scale = Math.floor(Math.min(this.app.width / gameSize.x, this.app.height / gameSize.y));
@@ -264,7 +283,11 @@ const GameState = () => ({
     },
 
     step: function (dt) {
+        const prevPlayerPoint = getPathPoint(getPath(player.evasion), player.position);
         player.position += player.speed * dt;
+        const playerPoint = getPathPoint(getPath(player.evasion), player.position);
+        puffEffect.move(prevPlayerPoint.x, prevPlayerPoint.y, playerPoint.x, playerPoint.y, dt);
+
         updateScore();
         things.forEach(thing => {
             if (player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position) {
@@ -295,17 +318,24 @@ const GameState = () => ({
             }
         })
         things.filter(thing => !thing.alive).forEach(thing => {
+            const point = getPathPoint(getPath(thing.side), thing.position);
             switch (thing.type) {
                 case 'coin':
                     addCoin();
+                    effects.push(explode({x: point.x, y: point.y, r: 218, g: 165, b: 32, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: -50}));
                     break;
                 case 'obstacle':
                     addObstacle();
+                    effects.push(explode({x: point.x, y: point.y, r: 255, g: 0, b: 0, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: 50}));
                     player.speed += .2;
                     break;
             }
         })
         things = things.filter(thing => thing.alive);
+        effects.forEach(effect => {
+            effect.update(dt);
+        });
+        effects = effects.filter(effect => effect.alive);
         if (player.position > player.round * pathLength) {
             player.round++;
             addCoin();
@@ -314,7 +344,7 @@ const GameState = () => ({
     },
     render: function (dt) {
         const ctx = this.app.layer.context;
-        ctx.fillStyle = 'black';        
+        ctx.fillStyle = 'black';
         ctx.fillRect(0, 0, this.app.width, this.app.height);
 
         ctx.save();
@@ -323,8 +353,8 @@ const GameState = () => ({
         ctx.strokeStyle = 'white';
         ctx.beginPath();
         outLinePath.forEach(segment => {
-            if(segment.r){
-                ctx.arc(segment.cx, segment.cy, segment.r, segment.start.angle, segment.end.angle, true);                
+            if (segment.r) {
+                ctx.arc(segment.cx, segment.cy, segment.r, segment.start.angle, segment.end.angle, true);
             } else {
                 ctx.lineTo(segment.start.x, segment.start.y);
                 ctx.lineTo(segment.end.x, segment.end.y);
@@ -338,12 +368,13 @@ const GameState = () => ({
 
         ctx.globalAlpha = 1;
 
-
-        drawThing(ctx, player.position, player.evasion, playerSize, 'turquoise');
-
         things.forEach(thing => {
             drawThing(ctx, thing.position, thing.side, thing.size, thing.color);
         });
+
+        effects.forEach(effect => effect.draw(ctx));
+
+        drawThing(ctx, player.position, player.evasion, playerSize, 'turquoise');
 
         const textMargin = 4;
         const textLeft = innerBorder + textMargin;
