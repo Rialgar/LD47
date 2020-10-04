@@ -6,7 +6,7 @@ I purposefully kept this one really small in scope, since I did not feel like ac
 
 This game is fully implemented using html5 + javascript. Any modern browser should be able to run it, but I only tested in Google Chrome.
 
-TODO [Rate here](https://ldjam.com/events/ludum-dare/47/TODO)
+[Rate here](https://ldjam.com/events/ludum-dare/47/sputtering-around-the-loop)
 
 ## Controls
 - Left/A - Evade towards the center
