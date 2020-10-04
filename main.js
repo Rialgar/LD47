@@ -56,7 +56,10 @@ const app = playground({
                 `${score}`,
                 "",
                 "Your highest score was",
-                `${localStorage.highScore}`
+                `${localStorage.highScore}`,
+                '',
+                "Press enter or space",
+                "to restart.",
             ], 'restart'));
         },
     
