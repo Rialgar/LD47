@@ -11,13 +11,92 @@ const innerBorder = 13;
 const pathWidth = innerBorder - outerBorder;
 const pathDistance = (outerBorder + innerBorder) / 2;
 const pathSize = {
-    x: (gameSize.x - 2 * pathDistance),
-    y: (gameSize.y - 2 * pathDistance)
+    x: (gameSize.x - 2 * innerBorder),
+    y: (gameSize.y - 2 * innerBorder),
+    arc: Math.PI * 0.5 * pathWidth / 2
 }
-const pathLength = 2 * pathSize.x + 2 * pathSize.y;
+const centerPath = [
+    {
+        start: { pos: 0, x: pathDistance, y: innerBorder },
+        end: { pos: pathSize.y, x: pathDistance, y: gameSize.y - innerBorder }
+    },
+    {
+        start: { pos: pathSize.y, angle: Math.PI },
+        end: { pos: pathSize.y + pathSize.arc, angle: Math.PI * 0.5 },
+        cx: innerBorder,
+        cy: gameSize.y - innerBorder,
+        r: pathWidth / 2
+    },
+    {
+        start: { pos: pathSize.y + pathSize.arc, x: innerBorder, y: gameSize.y - pathDistance },
+        end: { pos: pathSize.x + pathSize.y + pathSize.arc, x: gameSize.x - innerBorder, y: gameSize.y - pathDistance }
+    },
+    {
+        start: { pos: pathSize.x + pathSize.y + pathSize.arc, angle: Math.PI * 0.5 },
+        end: { pos: pathSize.x + pathSize.y + 2 * pathSize.arc, angle: 0 },
+        cx: gameSize.x - innerBorder,
+        cy: gameSize.y - innerBorder,
+        r: pathWidth / 2
+    },
+    {
+        start: { pos: pathSize.x + pathSize.y + 2 * pathSize.arc, x: gameSize.x - pathDistance, y: gameSize.y - innerBorder },
+        end: { pos: pathSize.x + 2 * pathSize.y + 2 * pathSize.arc, x: gameSize.x - pathDistance, y: innerBorder }
+    },
+    {
+        start: { pos: pathSize.x + 2 * pathSize.y + 2 * pathSize.arc, angle: Math.PI * 2 },
+        end: { pos: pathSize.x + 2 * pathSize.y + 3 * pathSize.arc, angle: Math.PI * 1.5 },
+        cx: gameSize.x - innerBorder,
+        cy: innerBorder,
+        r: pathWidth / 2
+    },
+    {
+        start: { pos: pathSize.x + 2 * pathSize.y + 3 * pathSize.arc, x: gameSize.x - innerBorder, y: pathDistance },
+        end: { pos: 2 * pathSize.x + 2 * pathSize.y + 3 * pathSize.arc, x: innerBorder, y: pathDistance }
+    },
+    {
+        start: { pos: 2 * pathSize.x + 2 * pathSize.y + 3 * pathSize.arc, angle: Math.PI * 1.5 },
+        end: { pos: 2 * pathSize.x + 2 * pathSize.y + 4 * pathSize.arc, angle: Math.PI },
+        cx: innerBorder,
+        cy: innerBorder,
+        r: pathWidth / 2
+    }
+]
+const pathLength = centerPath[centerPath.length - 1].end.pos;
 
-const playerMargin = 0;
-const playerSize = (pathWidth - 2 - playerMargin) / 2;
+const innerPath = JSON.parse(JSON.stringify(centerPath));
+innerPath.forEach(segment => {
+    if(segment.r){
+        segment.r = pathWidth / 4;
+    }
+    ['start', 'end'].forEach(key => {
+        ['x', 'y'].forEach(axis => {
+            if(segment[key][axis] === pathDistance){
+                segment[key][axis] += pathWidth / 4;
+            }
+            if(segment[key][axis] === gameSize[axis] - pathDistance){
+                segment[key][axis] -= pathWidth / 4;
+            }
+        });
+    });
+})
+const outerPath = JSON.parse(JSON.stringify(centerPath));
+outerPath.forEach(segment => {
+    if(segment.r){
+        segment.r = 3 * pathWidth / 4;
+    }
+    ['start', 'end'].forEach(key => {
+        ['x', 'y'].forEach(axis => {
+            if(segment[key][axis] === pathDistance){
+                segment[key][axis] -= pathWidth / 4;
+            }
+            if(segment[key][axis] === gameSize[axis] - pathDistance){
+                segment[key][axis] += pathWidth / 4;
+            }
+        });
+    });
+});
+
+const playerSize = 4;
 const player = {
     position: 0,
     speed: 10,
@@ -28,75 +107,63 @@ const player = {
 
 let things = [];
 
-function getPathPoint(position) {
-    if (position < pathSize.y) {
-        return { x: pathDistance, y: pathDistance + position, segment: 0 };
-    } else if (position < pathSize.x + pathSize.y) {
-        return { x: pathDistance + position - pathSize.y, y: gameSize.y - pathDistance, segment: 1 };
-    } else if (position < pathSize.x + 2 * pathSize.y) {
-        return { x: gameSize.x - pathDistance, y: gameSize.y - pathDistance - (position - pathSize.x - pathSize.y), segment: 2 };
+function getPathPoint(path, position) {
+    while (position < 0) {
+        position += pathLength;
+    }
+    while (position >= pathLength) {
+        position -= pathLength;
+    }
+    const segment = path.find(seg => seg.start.pos <= position && seg.end.pos > position);
+    const blend = (position - segment.start.pos) / (segment.end.pos - segment.start.pos);
+    if(segment.r){
+        return {
+            segment,
+            angle: segment.start.angle + (segment.end.angle - segment.start.angle) * blend
+        }
     } else {
-        return { x: gameSize.x - pathDistance - (position - pathSize.x - 2 * pathSize.y), y: pathDistance, segment: 3 };
+        return {
+            segment,
+            segmentIndex: path.indexOf(segment),
+            x: segment.start.x + (segment.end.x - segment.start.x) * blend,
+            y: segment.start.y + (segment.end.y - segment.start.y) * blend
+        }
     }
 }
 
-function drawThing(ctx, position, side, margin, fillStyle) {
-    const halfMargin = margin / 2;
-    const halfMax = (pathWidth - 2) / 2;
+function drawThing(ctx, position, side, size, color) {
+    const path = side < 0 ? innerPath : (side > 0 ? outerPath : centerPath);
+    const start = getPathPoint(path, position - size);
+    const end = getPathPoint(path, position + size);
+    ctx.beginPath();
+    if(!start.angle){
+        ctx.lineTo(start.x, start.y);
+    }
+    
+    if(start.angle || end.angle){
+        const cx = start.segment.cx || end.segment.cx;
+        const cy = start.segment.cy || end.segment.cy;
+        const r = start.segment.r || end.segment.r;
+        const startAngle = start.angle || end.segment.start.angle;
+        const endAngle = end.angle || start.segment.end.angle;
 
-    while (position > pathLength) {
-        position -= pathLength;
+        ctx.arc(cx, cy, r, startAngle, endAngle, true);
+    } else if (start.segment !== end.segment && end.segmentIndex != (start.segmentIndex + 1) % path.length ){
+        const midSegment = path[(start.segmentIndex + 1) % path.length];
+        ctx.arc(midSegment.cx, midSegment.cy, midSegment.r, midSegment.start.angle, midSegment.end.angle, true);
     }
 
-    const pathPoint = getPathPoint(position);
-    ctx.fillStyle = fillStyle;
-
-    let left, right, top, bottom;
-
-    if (pathPoint.segment === 0 || pathPoint.segment === 2) {
-        top = pathPoint.y - halfMax + margin;
-        bottom = pathPoint.y + halfMax - margin;
-        if (side < 0 && pathPoint.segment === 0 || side > 0 && pathPoint.segment === 2) {
-            left = pathPoint.x + halfMargin;
-            right = pathPoint.x + halfMax - halfMargin;
-        } else if (side < 0 && pathPoint.segment === 2 || side > 0 && pathPoint.segment === 0) {
-            left = pathPoint.x - halfMax + halfMargin;
-            right = pathPoint.x - halfMargin;
-        } else {
-            left = pathPoint.x - halfMax;
-            right = pathPoint.x + halfMax;
-        }
-    } else {
-        left = pathPoint.x - halfMax + margin;
-        right = pathPoint.x + halfMax - margin;
-        if (side < 0 && pathPoint.segment === 3 || side > 0 && pathPoint.segment === 1) {
-            top = pathPoint.y + halfMargin;
-            bottom = pathPoint.y + halfMax - halfMargin;
-        } else if (side < 0 && pathPoint.segment === 1 || side > 0 && pathPoint.segment === 3) {
-            top = pathPoint.y - halfMax + halfMargin;
-            bottom = pathPoint.y - halfMargin;
-        } else {
-            top = pathPoint.y - halfMax;
-            bottom = pathPoint.y + halfMax;
-        }
+    if(!end.angle){
+        ctx.lineTo(end.x, end.y);
     }
-
-    if (side < 0) {
-        left = Math.max(pathDistance, left);
-        right = Math.min(gameSize.x - pathDistance, right);
-        top = Math.max(pathDistance, top);
-        bottom = Math.min(gameSize.y - pathDistance, bottom);
-    }
-
-    const width = right - left;
-    const height = bottom - top;
-
-    ctx.fillRect(left, top, width, height);
+    
+    ctx.strokeStyle = color;
+    ctx.lineWidth = size;
+    ctx.stroke();    
 }
 
 const maxSpawnAttempts = 50;
-const coinMargin = 3;
-const coinSize = (pathWidth - 2 - coinMargin) / 2;
+const coinSize = 2;
 function addCoin() {
     let attempts = 0;
     let position, side;
@@ -113,8 +180,7 @@ function addCoin() {
             size: coinSize,
             position,
             side,
-            margin: coinMargin,
-            fillStyle: 'gold',
+            color: 'gold',
             alive: true
         });
     } else {
@@ -122,8 +188,7 @@ function addCoin() {
     }
 }
 
-const obstacleMargin = 0;
-const obstacleSize = (pathWidth - 2 - obstacleMargin) / 2;
+const obstacleSize = 4;
 function addObstacle() {
     let attempts = 0;
     let position, side;
@@ -133,7 +198,7 @@ function addObstacle() {
         attempts++;
     } while (attempts < maxSpawnAttempts && things.some(thing =>
         (thing.side === side && thing.position - thing.size - obstacleSize < position && thing.position + thing.size + obstacleSize > position) ||
-        (thing.side !== side && thing.type === 'obstacle' && thing.position - thing.size - 5*obstacleSize < position && thing.position + thing.size + 5*obstacleSize > position)
+        (thing.side !== side && thing.type === 'obstacle' && thing.position - thing.size - 5 * obstacleSize < position && thing.position + thing.size + 5 * obstacleSize > position)
     ));
     if (attempts < maxSpawnAttempts) {
         things.push({
@@ -141,8 +206,7 @@ function addObstacle() {
             size: obstacleSize,
             position,
             side,
-            margin: obstacleMargin,
-            fillStyle: 'red',
+            color: 'red',
             alive: true
         });
     } else {
@@ -153,9 +217,9 @@ function addObstacle() {
 let score = 0;
 let highScore = parseInt(localStorage.highScore) || 0;
 
-function updateScore(){
-    score = Math.round(player.position) + pathLength*player.coins;
-    if(score > highScore){
+function updateScore() {
+    score = Math.round(player.position + pathLength * player.coins);
+    if (score > highScore) {
         highScore = score;
         localStorage.highScore = highScore;
     }
@@ -186,7 +250,7 @@ const GameState = () => ({
         player.position += player.speed * dt;
         updateScore();
         things.forEach(thing => {
-            if(player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position){
+            if (player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position) {
                 switch (thing.type) {
                     case 'coin':
                         player.coins += 1;
@@ -194,7 +258,7 @@ const GameState = () => ({
                         thing.alive = false;
                         break;
                     case 'obstacle':
-                        if(thing.hitOnce){
+                        if (thing.hitOnce) {
                             this.app.loose(score);
                         } else {
                             thing.hitOnce = true;
@@ -202,7 +266,7 @@ const GameState = () => ({
                         break;
                 }
             }
-            if(thing.position <= player.position - 2 * pathWidth){
+            if (thing.position <= player.position - 2 * pathWidth) {
                 switch (thing.type) {
                     case 'coin':
                         thing.position += pathLength;
@@ -211,7 +275,7 @@ const GameState = () => ({
                         thing.alive = false;
                         break;
                 }
-            }            
+            }
         })
         things.filter(thing => !thing.alive).forEach(thing => {
             switch (thing.type) {
@@ -220,12 +284,12 @@ const GameState = () => ({
                     break;
                 case 'obstacle':
                     addObstacle();
-                    player.speed += .1;
+                    player.speed += .2;
                     break;
             }
         })
         things = things.filter(thing => thing.alive);
-        if(player.position > player.round * pathLength){
+        if (player.position > player.round * pathLength) {
             player.round++;
             addCoin();
             addObstacle();
@@ -246,15 +310,18 @@ const GameState = () => ({
         ctx.strokeRect(outerBorder, outerBorder, gameSize.x - 2 * outerBorder, gameSize.y - 2 * outerBorder);
         ctx.strokeRect(innerBorder, innerBorder, gameSize.x - 2 * innerBorder, gameSize.y - 2 * innerBorder);
 
-        drawThing(ctx, player.position, player.evasion, playerMargin, 'turquoise');
+        ctx.globalAlpha = 1;
+
+
+        drawThing(ctx, player.position, player.evasion, playerSize, 'turquoise');
 
         things.forEach(thing => {
-            drawThing(ctx, thing.position, thing.side, thing.margin, thing.fillStyle);
+            drawThing(ctx, thing.position, thing.side, thing.size, thing.color);
         });
 
         const textMargin = 4;
         const textLeft = innerBorder + textMargin;
-        const textRight =  gameSize.x - innerBorder - textMargin;
+        const textRight = gameSize.x - innerBorder - textMargin;
 
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
