@@ -10,7 +10,9 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
     const partIntervalRange = partIntervalMax - partIntervalMin;
     let timeTilPart = Math.random() * partIntervalRange + partIntervalMin;
 
-    function update(dt) {
+    let soundCounter = 1;
+
+    function update(dt, app) {
         timeTilPart -= dt;
 
         let remainder = dt;
@@ -21,14 +23,23 @@ const puff = ({r, g, b, dampening, speedScale, maxAge, partIntervalMin, partInte
             remainder -= nextPart;
 
             const speedFactor = Math.random() * speedScale * lastDt;
+            const startAge = Math.pow(Math.random(), 2) * maxAge;
             particles.push({
                 x: currentX,
                 y: currentY,
                 vx: (lastX - currentX) * speedFactor,
                 vy: (lastY - currentY) * speedFactor,
-                age: Math.pow(Math.random(), 2) * maxAge,
+                age: startAge,
                 size: 2
             });
+
+            if(startAge < 2*maxAge/3){
+                soundCounter--;
+                if(soundCounter <= 0){
+                    app.sound.play('puff_s');
+                    soundCounter = 8;
+                }
+            }
 
             particles.forEach(part => {
                 part.age += delta;

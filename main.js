@@ -12,7 +12,8 @@ const Start = TextState([
     "Press enter or space",
     "to start.",
     "",
-    "F1 anytime for controls."
+    "F1 anytime for controls.",
+    "M to Mute/Unmute"
 ], 'start');
 
 const Help = TextState([
@@ -21,6 +22,8 @@ const Help = TextState([
     "Left/A - Evade towards the center",
     "Right/D - Evade towards the outside",
     "",
+    "M - Mute/Unmute",
+    "",
     "Press enter or space",
     "to continue.",
 ], 'start');
@@ -28,17 +31,33 @@ const Help = TextState([
 const Game = GameState();
 
 const app = playground({
-    preload: function() { },
+    preload: function() {
+        this.loadSounds("puff.wav", "coin.wav", "explode.wav", "death.wav");
+        this.sound.alias('puff_s', 'puff', 0.1, 1);
+        this.sound.alias('coin_s', 'coin', 0.2, 1);
+        this.sound.alias('explode_s', 'explode', 0.2, 1);
+        this.sound.alias('death_s', 'death', 0.2, 1);
+    },
     create: function() {
         this.layer.canvas.id = 'game';
     },
     ready: function() {
+        const doPlay = this.sound.play;
+        const self = this;
+        this.sound.play = function(){
+            if(!self.muted){
+                doPlay.apply(self.sound, arguments);
+            }
+        }
         this.setState(Start)
     },
 
     keydown: function(data) {
         if( data.key === "f1"){
             this.help();
+        } else if( data.key === "m" ){
+            this.muted = !this.muted;
+            localStorage.muted = this.muted;
         }
     },
 
@@ -74,5 +93,7 @@ const app = playground({
         restart: function(){
             Game.create();
             this.setState(Game);
-        }
+        },
+
+        muted: localStorage.muted === 'true'
 });

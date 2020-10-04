@@ -293,12 +293,13 @@ const GameState = () => ({
             if (player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position) {
                 switch (thing.type) {
                     case 'coin':
-                        player.coins += 1;
+                        player.coins += 1;                        
                         updateScore();
                         thing.alive = false;
                         break;
                     case 'obstacle':
                         if (thing.hitOnce) {
+                            this.app.sound.play('death_s');
                             this.app.loose(score);
                         } else {
                             thing.hitOnce = true;
@@ -322,10 +323,12 @@ const GameState = () => ({
             switch (thing.type) {
                 case 'coin':
                     addCoin();
+                    this.app.sound.play('coin_s');
                     effects.push(explode({x: point.x, y: point.y, r: 218, g: 165, b: 32, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: -50}));
                     break;
                 case 'obstacle':
                     addObstacle();
+                    this.app.sound.play('explode_s');
                     effects.push(explode({x: point.x, y: point.y, r: 255, g: 0, b: 0, dampening: 0.05, maxSpeed: 50, maxAge: 2, partCount: 20, gravity: 50}));
                     player.speed += .2;
                     break;
@@ -333,7 +336,7 @@ const GameState = () => ({
         })
         things = things.filter(thing => thing.alive);
         effects.forEach(effect => {
-            effect.update(dt);
+            effect.update(dt, this.app);
         });
         effects = effects.filter(effect => effect.alive);
         if (player.position > player.round * pathLength) {
