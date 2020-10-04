@@ -32,11 +32,12 @@ const Game = GameState();
 
 const app = playground({
     preload: function() {
-        this.loadSounds("puff.wav", "coin.wav", "explode.wav", "death.wav");
+        this.loadSounds("puff.wav", "coin.wav", "explode.wav", "death.wav", "highScore.wav");
         this.sound.alias('puff_s', 'puff', 0.1, 1);
         this.sound.alias('coin_s', 'coin', 0.2, 1);
         this.sound.alias('explode_s', 'explode', 0.2, 1);
         this.sound.alias('death_s', 'death', 0.2, 1);
+        this.sound.alias('highScore_s', 'highScore', 0.2, 1);
     },
     create: function() {
         this.layer.canvas.id = 'game';

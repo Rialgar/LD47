@@ -244,12 +244,17 @@ function addObstacle() {
 
 let score = 0;
 let highScore = parseInt(localStorage.highScore) || 0;
+let highScoreBeat = highScore === 0;
 
-function updateScore() {
+function updateScore(app) {
     score = Math.round(player.position + pathLength * player.coins);
     if (score > highScore) {
         highScore = score;
         localStorage.highScore = highScore;
+        if(!highScoreBeat){
+            highScoreBeat = true;
+            app.sound.play('highScore_s');
+        }
     }
 }
 
@@ -274,7 +279,9 @@ const GameState = () => ({
         addCoin();
         addObstacle();
 
-        updateScore();
+        highScoreBeat = highScore === 0;
+
+        updateScore(this.app);
     },
     resize: function () {
         scale = Math.floor(Math.min(this.app.width / gameSize.x, this.app.height / gameSize.y));
@@ -288,13 +295,13 @@ const GameState = () => ({
         const playerPoint = getPathPoint(getPath(player.evasion), player.position);
         puffEffect.move(prevPlayerPoint.x, prevPlayerPoint.y, playerPoint.x, playerPoint.y, dt);
 
-        updateScore();
+        updateScore(this.app);
         things.forEach(thing => {
             if (player.evasion * thing.side >= 0 && thing.position - thing.size - playerSize < player.position && thing.position + thing.size + playerSize > player.position) {
                 switch (thing.type) {
                     case 'coin':
                         player.coins += 1;                        
-                        updateScore();
+                        updateScore(this.app);
                         thing.alive = false;
                         break;
                     case 'obstacle':
